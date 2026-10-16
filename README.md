@@ -1,4 +1,4 @@
- ![SomeRabbit logo](src/assets/SomeRabbit.png)
+ ![SomeRabbit logo](src/assets/SomeRabbit-export.png)
 
  # dirwatch
 

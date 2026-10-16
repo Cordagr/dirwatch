@@ -1,4 +1,10 @@
-# dirwatch
+ ```text
+  (\_/)
+  (o.o)
+ (")_(")
+ ```
+
+ # dirwatch
 
 dirwatch watches directories and reports file creations, edits, removals,
 renames, and overflow. It uses the `notify` crate for native notifications;

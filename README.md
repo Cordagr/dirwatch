@@ -1,8 +1,4 @@
- ```text
-  (\_/)
-  (o.o)
- (")_(")
- ```
+ ![SomeRabbit logo](src/assets/SomeRabbit.png)
 
  # dirwatch
 

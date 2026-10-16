@@ -1,0 +1,80 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.artifact }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact: dirwatch-windows-x86_64
+            executable: dirwatch.exe
+            archive: dirwatch-windows-x86_64.zip
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact: dirwatch-linux-x86_64
+            executable: dirwatch
+            archive: dirwatch-linux-x86_64.tar.gz
+          - os: macos-14
+            target: aarch64-apple-darwin
+            artifact: dirwatch-macos-aarch64
+            executable: dirwatch
+            archive: dirwatch-macos-aarch64.tar.gz
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Run tests
+        run: cargo test --all-features
+      - name: Run Clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+      - name: Build release executable
+        run: cargo build --release --target ${{ matrix.target }} --bin dirwatch
+      - name: Package Windows archive
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item "target/${{ matrix.target }}/release/${{ matrix.executable }}" dist/
+          Compress-Archive -Path "dist/${{ matrix.executable }}" -DestinationPath "dist/${{ matrix.archive }}"
+      - name: Package Unix archive
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p dist
+          cp "target/${{ matrix.target }}/release/${{ matrix.executable }}" dist/
+          tar -czf "dist/${{ matrix.archive }}" -C dist "${{ matrix.executable }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/${{ matrix.archive }}
+          if-no-files-found: error
+  publish:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: dirwatch-*
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: dist/*

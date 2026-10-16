@@ -44,7 +44,7 @@ fn compile_globs(patterns: &[String]) -> Result<Option<GlobSet>, Box<dyn Error>>
     if patterns.is_empty() {
         return Ok(None);
     }
-    let mut builder = GlobSetBuilder::new();
+    let builder = GlobSetBuilder::new();
     for pattern in patterns {
         let mut glob = GlobBuilder::new(pattern);
         #[cfg(windows)]

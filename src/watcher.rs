@@ -41,7 +41,6 @@ impl Watcher {
         self.engine.unwatch(path)
     }
 
-
     pub fn next(&self) -> Result<Option<Event>> {
         self.engine.next()
     }

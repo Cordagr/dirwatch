@@ -46,6 +46,9 @@ fn compile_globs(patterns: &[String]) -> Result<Option<GlobSet>, Box<dyn Error>>
     }
     let mut builder = GlobSetBuilder::new();
     for pattern in patterns {
+        #[cfg(windows)]
+        let mut glob = GlobBuilder::new(pattern);
+        #[cfg(not(windows))]
         let glob = GlobBuilder::new(pattern);
         #[cfg(windows)]
         glob.case_insensitive(true);

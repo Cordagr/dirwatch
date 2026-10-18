@@ -39,12 +39,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Use the command line
 
-Install the CLI from this checkout and start watching a directory:
+Install the CLI from crates.io and start watching a directory:
 
 ```powershell
-cargo install --path .
+cargo install dirwatch
 dirwatch watch C:\Users\me\Documents
 ```
+
+To install from a local checkout instead, run `cargo install --path .` from
+the repository root.
 
 ### Examples
 

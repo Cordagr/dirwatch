@@ -1,17 +1,20 @@
- ![SomeRabbit logo](src/assets/Logo.png)
+![SomeRabbit logo](src/assets/Logo.png)
 
- # dirwatch
+# dirwatch
 
 [![CI](https://github.com/Cordagr/dirwatch/actions/workflows/ci.yml/badge.svg)](https://github.com/Cordagr/dirwatch/actions)
 [![Release](https://img.shields.io/github/v/release/Cordagr/dirwatch)](https://github.com/Cordagr/dirwatch/releases)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-dirwatch watches directories and reports file creations, edits, removals,
-renames, and overflow. It uses the `notify` crate for native notifications;
-Windows uses `ReadDirectoryChangesW`.
+A bounded, backpressure-aware filesystem watcher for Rust.
 
-If events arrive faster than they can be handled, the bounded queue can block,
-drop, or coalesce them. A metrics snapshot shows what happened during a run.
+When filesystem events arrive faster than your application can process them, dirwatch lets you choose what happens next: block, drop, coalesce, or signal overflow.
+
+* Bounded queue with a configurable memory budget
+* Five backpressure policies for different workloads
+* Recursive watching with include/exclude filters
+* CLI and Rust API with text and JSONL output
+* Metrics snapshots to inspect queue pressure and event loss
 
 ## Use the library
 

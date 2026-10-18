@@ -100,6 +100,9 @@ writes), with a 200 us delay per delivered event. It runs five paired trials,
 alternating backend order. The `notify` baseline uses an unbounded channel;
 dirwatch uses its default 4 MiB bounded queue and 50 ms coalescing window.
 
+With a deliberately slow consumer, plain notify fell about 2.7 seconds behind and queued 4,765 pending paths. 
+dirwatch stayed at 16 queued events and ~8 ms median latency by coalescing repeated writes to the same files.
+
 Median results on Windows:
 
 | Metric | dirwatch | plain `notify` |

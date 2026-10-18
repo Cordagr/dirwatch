@@ -4,13 +4,11 @@ pub mod backend;
 #[cfg(feature = "sim-support")]
 pub mod benchmarks;
 pub mod coalesce;
-#[path = "../config.rs"]
 pub mod config;
 #[path = "client/engine.rs"]
 pub mod engine;
 pub mod error;
 pub mod event;
-#[path = "../metrics.rs"]
 pub mod metrics;
 pub mod queue;
 pub mod stream;

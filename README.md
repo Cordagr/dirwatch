@@ -1,6 +1,10 @@
- ![SomeRabbit logo](src/assets/SomeRabbit-export.png)
+ ![SomeRabbit logo](src/assets/Logo.png)
 
  # dirwatch
+
+[![CI](https://github.com/Cordagr/dirwatch/actions/workflows/ci.yml/badge.svg)](https://github.com/Cordagr/dirwatch/actions)
+[![Release](https://img.shields.io/github/v/release/Cordagr/dirwatch)](https://github.com/Cordagr/dirwatch/releases)
+![License](https://img.shields.io/badge/license-MIT-blue)
 
 dirwatch watches directories and reports file creations, edits, removals,
 renames, and overflow. It uses the `notify` crate for native notifications;
@@ -88,6 +92,44 @@ default. `validate` accepts the queue and watcher configuration flags.
   ends.
 
 Run `dirwatch --help` or `dirwatch watch --help` for the complete option list.
+
+## Benchmarks
+
+The release-mode comparison rewrites the same 16 files 250 times (4,000
+writes), with a 200 us delay per delivered event. It runs five paired trials,
+alternating backend order. The `notify` baseline uses an unbounded channel;
+dirwatch uses its default 4 MiB bounded queue and 50 ms coalescing window.
+
+Median results on Windows:
+
+| Metric | dirwatch | plain `notify` |
+| --- | ---: | ---: |
+| Input paths received | 8,000 | 8,000 |
+| Events delivered | 3,200 | 8,000 |
+| Events coalesced | 4,801 | 0 |
+| Events dropped / overflow signals | 0 / 0 | 0 / 0 |
+| Peak pending items | 16 queue events | 4,765 paths |
+| Peak queue bytes | 2,928 bytes | Not bounded / not measured |
+| Approx. p50 latency | 8.39 ms | 2,684.35 ms |
+| Approx. p95 latency | 18.87 ms | 3,221.23 ms |
+| Input rate | 2,153 paths/s | 1,239 paths/s |
+
+This workload emphasizes repeated changes to the same paths. dirwatch coalesces
+events instead of delivering every raw notification; it kept its queue bounded
+while the deliberately slowed consumer fell behind. The `notify` baseline
+preserves all notifications but accumulates pending paths in an unbounded
+channel. Queue peak counts are not directly equivalent: dirwatch reports exact
+queue occupancy, while the baseline counts pending event paths. Latency is
+queue-enqueue-to-delivery for dirwatch and callback-to-consumer for `notify`.
+Percentiles are approximate upper bounds from a fixed-size logarithmic
+histogram. Results are a local workload comparison, not a cross-platform or
+general-purpose throughput claim.
+
+Run the benchmark on your machine with:
+
+```powershell
+cargo bench --bench watcher_compare
+```
 
 ## Development
 

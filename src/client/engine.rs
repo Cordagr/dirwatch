@@ -99,7 +99,8 @@ impl Engine {
                     self.metrics.record_event(crate::event::EventKind::Overflow);
                 }
             }
-            PushOutcome::Enqueued | PushOutcome::Coalesced => {}
+            PushOutcome::Coalesced => self.metrics.record_coalesced_event(),
+            PushOutcome::Enqueued => {}
         }
         self.update_queue_metrics()?;
         Ok(outcome)
@@ -131,6 +132,8 @@ impl Engine {
     fn update_queue_metrics(&self) -> Result<()> {
         self.metrics
             .set_queue_state(self.queue.len()?, self.queue.queued_bytes()?);
+        let (peak_events, peak_bytes) = self.queue.peak_state()?;
+        self.metrics.set_queue_peak(peak_events, peak_bytes);
         Ok(())
     }
 }
@@ -148,5 +151,27 @@ impl Drop for Engine {
             }
             self.closed = true;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::BackpressureOptions;
+    use crate::event::EventKind;
+    use std::time::Duration;
+
+    #[test]
+    fn records_coalesced_pushes() -> Result<()> {
+        let config = EngineConfig::builder()
+            .backpressure(BackpressureOptions::Coalesce)
+            .coalesce_window(Duration::from_secs(1))
+            .build()?;
+        let engine = Engine::start(config)?;
+        engine.push(Event::new(EventKind::Modified, "same.txt"))?;
+        engine.push(Event::new(EventKind::Modified, "same.txt"))?;
+
+        assert_eq!(engine.metrics().events_coalesced, 1);
+        Ok(())
     }
 }

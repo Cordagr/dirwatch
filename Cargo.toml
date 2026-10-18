@@ -2,6 +2,13 @@
 name = "dirwatch"
 version = "0.1.0"
 edition = "2021"
+description = "Cross-platform directory watcher with bounded queues and backpressure policies"
+license = "MIT"
+repository = "https://github.com/Cordagr/inotify"
+readme = "README.md"
+keywords = ["filesystem", "watcher", "notify", "events"]
+categories = ["filesystem", "command-line-utilities"]
+exclude = [".github/**", ".gitignore"]
 
 [lib]
 path = "src/lib.rs"
@@ -9,6 +16,10 @@ path = "src/lib.rs"
 [[bin]]
 name = "dirwatch"
 path = "src/main.rs"
+
+[[bench]]
+name = "watcher_compare"
+harness = false
 
 [features]
 default = []

@@ -19,6 +19,15 @@ struct QueueState {
     events: VecDeque<(Instant, Event)>,
     queued_bytes: usize,
     closed: bool,
+    peak_queued_events: usize,
+    peak_queued_bytes: usize,
+}
+
+impl QueueState {
+    fn record_high_water(&mut self) {
+        self.peak_queued_events = self.peak_queued_events.max(self.events.len());
+        self.peak_queued_bytes = self.peak_queued_bytes.max(self.queued_bytes);
+    }
 }
 
 struct QueueInner {
@@ -63,6 +72,8 @@ impl EventQueue {
                     events: VecDeque::new(),
                     queued_bytes: 0,
                     closed: false,
+                    peak_queued_events: 0,
+                    peak_queued_bytes: 0,
                 }),
                 not_empty: Condvar::new(),
                 not_full: Condvar::new(),
@@ -100,6 +111,7 @@ impl EventQueue {
                 }
                 state.events[index].1 = event;
                 state.queued_bytes = state.queued_bytes - old_bytes + event_bytes;
+                state.record_high_water();
                 self.inner.not_empty.notify_one();
                 return Ok(PushOutcome::Coalesced);
             }
@@ -122,6 +134,7 @@ impl EventQueue {
                 }
                 state.queued_bytes += event_bytes;
                 state.events.push_back((Instant::now(), event));
+                state.record_high_water();
                 self.inner.not_empty.notify_one();
                 Ok(PushOutcome::Enqueued)
             }
@@ -131,6 +144,7 @@ impl EventQueue {
                 } else {
                     state.queued_bytes += event_bytes;
                     state.events.push_back((Instant::now(), event));
+                    state.record_high_water();
                     self.inner.not_empty.notify_one();
                     Ok(PushOutcome::Enqueued)
                 }
@@ -146,6 +160,7 @@ impl EventQueue {
                 }
                 state.queued_bytes += event_bytes;
                 state.events.push_back((Instant::now(), event));
+                state.record_high_water();
                 self.inner.not_empty.notify_one();
                 if dropped == 0 {
                     Ok(PushOutcome::Enqueued)
@@ -157,6 +172,7 @@ impl EventQueue {
                 if state.queued_bytes + event_bytes <= self.inner.capacity_bytes {
                     state.queued_bytes += event_bytes;
                     state.events.push_back((Instant::now(), event));
+                    state.record_high_water();
                     self.inner.not_empty.notify_one();
                     return Ok(PushOutcome::Enqueued);
                 }
@@ -182,6 +198,7 @@ impl EventQueue {
         }
         state.queued_bytes = overflow_bytes;
         state.events.push_back((Instant::now(), overflow));
+        state.record_high_water();
         self.inner.not_empty.notify_one();
         Ok(PushOutcome::Overflowed(dropped))
     }
@@ -275,6 +292,7 @@ impl EventQueue {
         state.events.clear();
         state.queued_bytes = overflow.size_bytes();
         state.events.push_back((Instant::now(), overflow));
+        state.record_high_water();
         self.inner.not_empty.notify_one();
         Ok(dropped)
     }
@@ -304,6 +322,14 @@ impl EventQueue {
             .state
             .lock()
             .map(|state| state.queued_bytes)
+            .map_err(|_| Error::Poisoned)
+    }
+
+    pub fn peak_state(&self) -> Result<(usize, usize)> {
+        self.inner
+            .state
+            .lock()
+            .map(|state| (state.peak_queued_events, state.peak_queued_bytes))
             .map_err(|_| Error::Poisoned)
     }
 
@@ -398,5 +424,20 @@ mod tests {
             .pop_timeout(Duration::from_millis(1))
             .unwrap()
             .is_none());
+    }
+
+    #[test]
+    fn retains_queue_high_water_after_drain() {
+        let queue = queue(BackpressureOptions::Block);
+        for path in ["a", "b", "c"] {
+            queue.push(Event::new(EventKind::Modified, path)).unwrap();
+        }
+
+        let peak = queue.peak_state().unwrap();
+        assert_eq!(peak.0, 3);
+        assert!(peak.1 > 0);
+
+        while queue.try_pop().unwrap().is_some() {}
+        assert_eq!(queue.peak_state().unwrap(), peak);
     }
 }

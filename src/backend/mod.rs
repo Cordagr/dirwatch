@@ -52,12 +52,19 @@ impl NotifyBackend {
         match queue.drain_to_overflow(None) {
             Ok(dropped) => {
                 metrics.record_dropped_events(dropped);
-                match (queue.len(), queue.queued_bytes()) {
-                    (Ok(length), Ok(bytes)) => metrics.set_queue_state(length, bytes),
-                    _ => metrics.record_backend_error(),
-                }
+                Self::update_queue_metrics(queue, metrics);
             }
             Err(_) => metrics.record_backend_error(),
+        }
+    }
+
+    fn update_queue_metrics(queue: &EventQueue, metrics: &Metrics) {
+        match (queue.len(), queue.queued_bytes(), queue.peak_state()) {
+            (Ok(length), Ok(bytes), Ok((peak_events, peak_bytes))) => {
+                metrics.set_queue_state(length, bytes);
+                metrics.set_queue_peak(peak_events, peak_bytes);
+            }
+            _ => metrics.record_backend_error(),
         }
     }
 
@@ -94,13 +101,11 @@ impl NotifyBackend {
                     metrics.record_dropped_events(dropped);
                     metrics.record_event(EventKind::Overflow);
                 }
-                Ok(PushOutcome::Enqueued | PushOutcome::Coalesced) => {}
+                Ok(PushOutcome::Coalesced) => metrics.record_coalesced_event(),
+                Ok(PushOutcome::Enqueued) => {}
                 Err(_) => metrics.record_backend_error(),
             }
-            match (queue.len(), queue.queued_bytes()) {
-                (Ok(length), Ok(bytes)) => metrics.set_queue_state(length, bytes),
-                _ => metrics.record_backend_error(),
-            }
+            Self::update_queue_metrics(queue, metrics);
         }
     }
 }

@@ -1,17 +1,20 @@
- ![SomeRabbit logo](src/assets/Logo.png)
+![SomeRabbit logo](src/assets/Logo.png)
 
- # dirwatch
+# dirwatch
 
 [![CI](https://github.com/Cordagr/dirwatch/actions/workflows/ci.yml/badge.svg)](https://github.com/Cordagr/dirwatch/actions)
 [![Release](https://img.shields.io/github/v/release/Cordagr/dirwatch)](https://github.com/Cordagr/dirwatch/releases)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-dirwatch watches directories and reports file creations, edits, removals,
-renames, and overflow. It uses the `notify` crate for native notifications;
-Windows uses `ReadDirectoryChangesW`.
+A bounded, backpressure-aware filesystem watcher for Rust.
 
-If events arrive faster than they can be handled, the bounded queue can block,
-drop, or coalesce them. A metrics snapshot shows what happened during a run.
+When filesystem events arrive faster than your application can process them, dirwatch lets you choose what happens next: block, drop, coalesce, or signal overflow.
+
+* Bounded queue with a configurable memory budget
+* Five backpressure policies for different workloads
+* Recursive watching with include/exclude filters
+* CLI and Rust API with text and JSONL output
+* Metrics snapshots to inspect queue pressure and event loss
 
 ## Use the library
 
@@ -102,6 +105,9 @@ The release-mode comparison rewrites the same 16 files 250 times (4,000
 writes), with a 200 us delay per delivered event. It runs five paired trials,
 alternating backend order. The `notify` baseline uses an unbounded channel;
 dirwatch uses its default 4 MiB bounded queue and 50 ms coalescing window.
+
+With a deliberately slow consumer, plain notify fell about 2.7 seconds behind and queued 4,765 pending paths. 
+dirwatch stayed at 16 queued events and ~8 ms median latency by coalescing repeated writes to the same files.
 
 Median results on Windows:
 

@@ -1,5 +1,7 @@
 ![SomeRabbit logo](src/assets/Logo.png)
 
+
+
 # dirwatch
 
 [![CI](https://github.com/Cordagr/dirwatch/actions/workflows/ci.yml/badge.svg)](https://github.com/Cordagr/dirwatch/actions)
@@ -15,6 +17,42 @@ When filesystem events arrive faster than your application can process them, dir
 * Recursive watching with include/exclude filters
 * CLI and Rust API with text and JSONL output
 * Metrics snapshots to inspect queue pressure and event loss
+
+## Why use dirwatch?
+
+Events from the filesystem come in waves. Building, checking out using `git
+checkout` or saving files by an editor can cause thousands of events to be
+generated. If your consumer cannot keep pace with them, sacrifices must be made.
+
+With the simple usage of the [notify] crate, the common way is having an
+unbounded channel. No events get lost in this case, but there will be delays
+in delivering events, since they get accumulated in memory in large amounts.
+As seen in the [benchmark below](#benchmarks), the slow consumer got lagged
+for 2.7 seconds with 4,765 paths accumulated in the queue, while dirwatch
+managed to stay 16 events behind with 8 ms median latency.
+
+The solution to that would be the usage of bounded channel. However, this would
+cause other issues:
+
+- Blocking the callback can cause stalling of the operating system’s event
+  reader, which in turn can overflow its buffer and lose events without any
+  notice.
+- Dropping events means choosing the events to drop and informing the consumer
+  about that.
+- Repeated writing to the file results in the generation of many redundant
+  events.
+
+dirwatch allows a user to define a budget of memory and choose a policy
+(`block`, `drop-newest`, `drop-oldest`, `coalesce`, or `overflow-signal`)
+for what to do when the queue is full. The metric snapshots will give you
+an idea of how much pressure the queue takes and how many events it drops.
+
+**Use dirwatch when** a spike of changes exceeds the processing capacity of
+the consumer: build tools, sync daemons, log shippers, dev servers,
+indexers.
+
+**Use plain `notify` when** the consumer processes all events right away and
+needs every single event as it was received from the OS.
 
 ## Use the library
 

@@ -1,7 +1,3 @@
-![SomeRabbit logo](src/assets/Logo.png)
-
-
-
 # dirwatch
 
 [![CI](https://github.com/Cordagr/dirwatch/actions/workflows/ci.yml/badge.svg)](https://github.com/Cordagr/dirwatch/actions)

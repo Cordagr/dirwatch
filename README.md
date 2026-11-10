@@ -1,4 +1,4 @@
-# filewatcher
+# dirwatch
 
 [![CI](https://github.com/Cordagr/dirwatch/actions/workflows/ci.yml/badge.svg)](https://github.com/Cordagr/dirwatch/actions)
 [![Release](https://img.shields.io/github/v/release/Cordagr/dirwatch)](https://github.com/Cordagr/dirwatch/releases)
